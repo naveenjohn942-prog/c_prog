@@ -1,36 +1,35 @@
-//store 10 student name in a file and read the file
-#include<stdio.h>
-#include<stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-int main()
-{
+int main() {
     FILE *ptr;
-    char data[10];
-    ptr=fopen("readme.txt","w");
+    char data[50]; 
+    ptr = fopen("readme.txt", "wb");
 
-    if(ptr==NULL){
-        printf("failed");
-        exit(0);
-    }
-    else{
-        for(int i=0;i<5;i++){
-            printf("Enter the name");
-            scanf("%s",&data);
-
-            fprintf(ptr,"\n%s",data);
-            
+    if (ptr == NULL) {
+        printf("Failed to open file for writing.\n");
+        exit(1);
+    } else {
+        for (int i = 0; i < 10; i++) { 
+            printf("Enter the name: ");
+            scanf("%s", data);
+            fwrite(data, sizeof(char), sizeof(data), ptr); 
         }
         fclose(ptr);
-        printf("Data successfully read from file GfgTest.c\n");
-        printf("The file is now closed.");
+        printf("Data successfully written to file.\n");
     }
-    ptr=fopen("readme.txt","r");
-    for(int i=0;i<5;i++){
-            fscanf(ptr,"\n%s",&data);
-            printf("\nname are:%s",data);
-        }
+
+    ptr = fopen("readme.txt", "rb");
+    if (ptr == NULL) {
+        printf("Failed to open file for reading.\n");
+        exit(1);
+    }
+
+    printf("Names read from file:\n");
+    for (int i = 0; i < 10; i++) { 
+        fread(data, sizeof(char), sizeof(data), ptr); 
+        printf("Name: %s\n", data);
+    }
     fclose(ptr);
     return 0;
-    
 }
-
