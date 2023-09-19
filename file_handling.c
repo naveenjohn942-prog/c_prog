@@ -5,7 +5,7 @@
 int main()
 {
     FILE *ptr;
-    char data[10][10];
+    char data[10];
     ptr=fopen("readme.txt","w");
 
     if(ptr==NULL){
@@ -18,6 +18,7 @@ int main()
             scanf("%s",&data);
 
             fprintf(ptr,"\n%s",data);
+            
         }
         fclose(ptr);
         printf("Data successfully read from file GfgTest.c\n");
