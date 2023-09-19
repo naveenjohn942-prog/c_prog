@@ -23,7 +23,13 @@ int main()
         printf("Data successfully read from file GfgTest.c\n");
         printf("The file is now closed.");
     }
-
+    ptr=fopen("readme.txt","r");
+    for(int i=0;i<5;i++){
+            fscanf(ptr,"\n%s",&data);
+            printf("\nname are:%s",data);
+        }
+    fclose(ptr);
     return 0;
     
 }
+
