@@ -19,6 +19,7 @@ void listRecords();
 void modifyRecord();
 void searchRecord();
 void makePayment();
+void deleteRecord();
 int isPhoneNumberValid(const char *phone);
 int isStringValid(const char *str);
 
@@ -30,7 +31,7 @@ int main() {
     printf("\n\t\t****************************************************************");
 
     while (1) {
-        printf("\n Menu:\n 1: Add new record\n 2: List records\n 3: Modify record\n 4: Make payment\n 5: Search records\n 6: Exit\n");
+        printf("\n Menu:\n 1: Add new record\n 2: List records\n 3: Modify record\n 4: Make payment\n 5: Search records\n 6: Delete record\n 7: Exit\n");
         printf(" Enter your choice: ");
         scanf("%d", &choice);
 
@@ -51,6 +52,9 @@ int main() {
                 searchRecord();
                 break;
             case 6:
+                deleteRecord();
+                break;
+            case 7:
                 printf("\n\n\t\t\t\tTHANK YOU FOR USING OUR SERVICE\n");
                 exit(0);
             default:
@@ -62,9 +66,62 @@ int main() {
     return 0;
 }
 
+
+
+void deleteRecord() {
+    char phonenumber[PHONE_NUMBER_LENGTH + 1];
+    printf("\nEnter phone number to delete (10 digits only): ");
+    scanf("%s", phonenumber);
+    if (!isPhoneNumberValid(phonenumber)) {
+        printf("Invalid phone number format. Please enter 10 digits.\n");
+        return;
+    }
+
+    FILE *file = fopen(FILE_NAME, "rb");
+    if (file == NULL) {
+        printf("Error opening the data file.\n");
+        exit(1);
+    }
+
+    struct subscriber s;
+    int found = 0;
+
+    FILE *tempFile = fopen("temp.dat", "wb"); // Temporary file to store records without the deleted one
+
+    while (fread(&s, sizeof(struct subscriber), 1, file)) {
+        if (strcmp(s.phonenumber, phonenumber) == 0) {
+            found = 1;
+            continue; // Skip writing this record to the temporary file
+        }
+
+        fwrite(&s, sizeof(struct subscriber), 1, tempFile); // Write other records to the temporary file
+    }
+
+    fclose(file);
+    fclose(tempFile);
+
+    if (found) {
+        remove(FILE_NAME);           // Remove the original file
+        rename("temp.dat", FILE_NAME); // Rename the temporary file to the original file
+        printf("\nRecord with phone number %s has been deleted.\n", phonenumber);
+    } else {
+        printf("\nRequested Phone Number not found in our database. No records deleted.\n");
+        remove("temp.dat"); // Remove the temporary file if no records were deleted
+    }
+}
+
+
 int isPhoneNumberValid(const char *phone) {
-    // Check if the phone number has exactly 10 digits
     return (strlen(phone) == PHONE_NUMBER_LENGTH && strspn(phone, "0123456789") == PHONE_NUMBER_LENGTH);
+}
+
+int isStringValid(const char *str) {
+    for (int i = 0; str[i] != '\0'; i++) {
+        if (!isalpha(str[i]) && str[i] != ' ') {
+            return 0; // Non-alphabetic character found
+        }
+    }
+    return 1; // All characters are alphabetic or spaces
 }
 
 void addRecord() {
@@ -84,10 +141,25 @@ void addRecord() {
         return;
     }
 
+    // Check if the phone number already exists
+    FILE *existingFile = fopen(FILE_NAME, "rb");
+    if (existingFile != NULL) {
+        struct subscriber existing;
+        while (fread(&existing, sizeof(struct subscriber), 1, existingFile)) {
+            if (strcmp(existing.phonenumber, s.phonenumber) == 0) {
+                printf("Phone number already exists in the database. Record not added.\n");
+                fclose(file);
+                fclose(existingFile);
+                return;
+            }
+        }
+        fclose(existingFile);
+    }
+
     printf("Enter name: ");
-    scanf(" %[^\n]s", s.name); // Read the name with spaces
-    if (strlen(s.name) >= MAX_NAME_LENGTH) {
-        printf("Name is too long. Maximum name length is %d characters.\n", MAX_NAME_LENGTH - 1);
+    scanf(" %[^\n]s", s.name);
+    if (!isStringValid(s.name)) {
+        printf("Invalid name format. Please enter alphabetic characters and spaces only.\n");
         fclose(file);
         return;
     }
@@ -100,6 +172,7 @@ void addRecord() {
     fclose(file);
     printf("Record successfully added.\n");
 }
+
 
 void listRecords() {
     FILE *file = fopen(FILE_NAME, "rb");
@@ -119,7 +192,41 @@ void listRecords() {
     fclose(file);
 }
 
-void searchRecord() {
+
+
+void searchRecordByName() {
+    char searchName[MAX_NAME_LENGTH + 1];
+    printf("\nEnter name to search: ");
+    scanf(" %[^\n]s", searchName);
+    
+    FILE *file = fopen(FILE_NAME, "rb");
+    if (file == NULL) {
+        printf("Error opening the data file.\n");
+        exit(1);
+    }
+
+    struct subscriber s;
+    int found = 0;
+
+    printf("\nSearch Results by Name:\n");
+    printf("Phone Number\t\tUser Name\t\tAmount\n");
+    printf("----------------------------------------------\n");
+
+    while (fread(&s, sizeof(struct subscriber), 1, file)) {
+        if (strstr(s.name, searchName) != NULL) {
+            printf("%-20s%-20sRs. %.2f\n", s.phonenumber, s.name, s.amount);
+            found = 1;
+        }
+    }
+
+    if (!found) {
+        printf("\nNo records found for the provided name.\n");
+    }
+
+    fclose(file);
+}
+
+void searchRecordByNumber() {
     char phonenumber[PHONE_NUMBER_LENGTH + 1];
     printf("\nEnter phone number to search (10 digits only): ");
     scanf("%s", phonenumber);
@@ -139,8 +246,10 @@ void searchRecord() {
 
     while (fread(&s, sizeof(struct subscriber), 1, file)) {
         if (strcmp(s.phonenumber, phonenumber) == 0) {
-            printf("\nRecord Found:\n");
-            printf("Phone Number: %s\nName: %s\nAmount: Rs. %.2f\n", s.phonenumber, s.name, s.amount);
+            printf("\nSearch Results by Phone Number:\n");
+            printf("Phone Number\t\tUser Name\t\tAmount\n");
+            printf("----------------------------------------------\n");
+            printf("%-20s%-20sRs. %.2f\n", s.phonenumber, s.name, s.amount);
             found = 1;
             break;
         }
@@ -152,6 +261,73 @@ void searchRecord() {
 
     fclose(file);
 }
+
+void searchRecordByAmountRange() {
+    float minAmount, maxAmount;
+    printf("\nEnter minimum amount: ");
+    scanf("%f", &minAmount);
+    printf("Enter maximum amount: ");
+    scanf("%f", &maxAmount);
+
+    FILE *file = fopen(FILE_NAME, "rb");
+    if (file == NULL) {
+        printf("Error opening the data file.\n");
+        exit(1);
+    }
+
+    struct subscriber s;
+    int found = 0;
+
+    printf("\nSearch Results by Amount Range:\n");
+    printf("Phone Number\t\tUser Name\t\tAmount\n");
+    printf("----------------------------------------------\n");
+
+    while (fread(&s, sizeof(struct subscriber), 1, file)) {
+        if (s.amount >= minAmount && s.amount <= maxAmount) {
+            printf("%-20s%-20sRs. %.2f\n", s.phonenumber, s.name, s.amount);
+            found = 1;
+        }
+    }
+
+    if (!found) {
+        printf("\nNo records found within the specified amount range.\n");
+    }
+
+    fclose(file);
+}
+
+void searchRecord() {
+    int subChoice;
+
+    while (1) {
+        printf("\nSearch Options:\n");
+        printf("1: Search by Name\n");
+        printf("2: Search by Phone Number\n");
+        printf("3: Search by Amount Range\n");
+        printf("4: Back to Main Menu\n");
+        printf("Enter your choice: ");
+        scanf("%d", &subChoice);
+
+        switch (subChoice) {
+            case 1:
+                searchRecordByName();
+                break;
+            case 2:
+                searchRecordByNumber();
+                break;
+            case 3:
+                searchRecordByAmountRange();
+                break;
+            case 4:
+                return; // Return to the main menu
+            default:
+                printf("Invalid input. Please try again.\n");
+                break;
+        }
+    }
+}
+
+
 
 void modifyRecord() {
     char phonenumber[PHONE_NUMBER_LENGTH + 1];
@@ -184,9 +360,9 @@ void modifyRecord() {
             }
 
             printf("Enter new name: ");
-            scanf(" %[^\n]s", s.name); // Read the name with spaces
-            if (strlen(s.name) >= MAX_NAME_LENGTH) {
-                printf("Name is too long. Maximum name length is %d characters.\n", MAX_NAME_LENGTH - 1);
+            scanf(" %[^\n]s", s.name);
+            if (!isStringValid(s.name)) {
+                printf("Invalid name format. Please enter alphabetic characters and spaces only.\n");
                 fclose(file);
                 return;
             }
@@ -259,4 +435,3 @@ void makePayment() {
 
     fclose(file);
 }
-
